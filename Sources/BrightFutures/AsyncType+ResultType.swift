@@ -10,20 +10,20 @@ import Result
 public extension AsyncType where Value: ResultProtocol {
     /// `true` if the future completed with success, or `false` otherwise
     public var isSuccess: Bool {
-        return result?.analysis(ifSuccess: { _ in return true }, ifFailure: { _ in return false }) ?? false
+        return result?.result.analysis(ifSuccess: { _ in return true }, ifFailure: { _ in return false }) ?? false
     }
     
     /// `true` if the future failed, or `false` otherwise
     public var isFailure: Bool {
-        return result?.analysis(ifSuccess: { _ in return false }, ifFailure: { _ in return true }) ?? false
+        return result?.result.analysis(ifSuccess: { _ in return false }, ifFailure: { _ in return true }) ?? false
     }
     
     public var value: Value.Value? {
-        return result?.value
+        return result?.result.value
     }
     
     public var error: Value.Error? {
-        return result?.error
+        return result?.result.error
     }
     
     /// Adds the given closure as a callback for when the future succeeds. The closure is executed on the given context.
@@ -32,7 +32,7 @@ public extension AsyncType where Value: ResultProtocol {
     @discardableResult
     public func onSuccess(_ context: @escaping ExecutionContext = DefaultThreadingModel(), callback: @escaping (Value.Value) -> Void) -> Self {
         self.onComplete(context) { result in
-            result.analysis(ifSuccess: callback, ifFailure: { _ in })
+            result.result.analysis(ifSuccess: callback, ifFailure: { _ in })
         }
         
         return self
@@ -44,7 +44,7 @@ public extension AsyncType where Value: ResultProtocol {
     @discardableResult
     public func onFailure(_ context: @escaping ExecutionContext = DefaultThreadingModel(), callback: @escaping (Value.Error) -> Void) -> Self {
         self.onComplete(context) { result in
-            result.analysis(ifSuccess: { _ in }, ifFailure: callback)
+            result.result.analysis(ifSuccess: { _ in }, ifFailure: callback)
         }
         return self
     }
@@ -95,7 +95,7 @@ public extension AsyncType where Value: ResultProtocol {
         let res = Future<U, Value.Error>()
         
         self.onComplete(context, callback: { (result: Value) in
-            result.analysis(
+            result.result.analysis(
                 ifSuccess: { res.success(f($0)) },
                 ifFailure: { res.failure($0) })
         })
@@ -121,7 +121,7 @@ public extension AsyncType where Value: ResultProtocol {
         let res = Future<Value.Value, E1>()
         
         self.onComplete(c) { result in
-            result.analysis(
+            result.result.analysis(
                 ifSuccess: { res.success($0) },
                 ifFailure: { res.completeWith(task($0)) })
         }
@@ -142,7 +142,7 @@ public extension AsyncType where Value: ResultProtocol {
         let res = Future<Value.Value, E1>()
         
         self.onComplete(context) { result in
-            result.analysis(
+            result.result.analysis(
                 ifSuccess: { res.success($0) } ,
                 ifFailure: { res.failure(f($0)) })
         }
@@ -199,9 +199,9 @@ public extension AsyncType where Value: ResultProtocol, Value.Value: AsyncType, 
         let f = Future<Value.Value.Value.Value, Value.Error>()
         
         onComplete(ImmediateExecutionContext) { res in
-            res.analysis(ifSuccess: { innerFuture -> () in
+            res.result.analysis(ifSuccess: { innerFuture -> () in
                 innerFuture.onComplete(ImmediateExecutionContext) { (res:Value.Value.Value) in
-                    res.analysis(ifSuccess: { f.success($0) }, ifFailure: { err in f.failure(err) })
+                    res.result.analysis(ifSuccess: { f.success($0) }, ifFailure: { err in f.failure(err) })
                 }
             }, ifFailure: { f.failure($0) })
         }

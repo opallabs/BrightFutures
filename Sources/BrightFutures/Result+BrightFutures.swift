@@ -16,7 +16,7 @@ extension ResultProtocol {
     /// If a regular `map` was used, the result would be `Result<Future<U>>`.
     /// The implementation of this function uses `map`, but then flattens the result before returning it.
     public func flatMap<U>(_ f: (Value) -> Future<U, Error>) -> Future<U, Error> {
-        return analysis(ifSuccess: {
+        return result.analysis(ifSuccess: {
             return f($0)
         }, ifFailure: {
             return Future<U, Error>(error: $0)
@@ -29,8 +29,8 @@ extension ResultProtocol where Value: ResultProtocol, Error == Value.Error {
     /// Returns a .failure with the error from the outer or inner result if either of the two failed
     /// or a .success with the success value from the inner Result
     public func flatten() -> Result<Value.Value,Value.Error> {
-        return analysis(ifSuccess: { innerRes in
-            return innerRes.analysis(ifSuccess: {
+        return result.analysis(ifSuccess: { innerRes in
+            return innerRes.result.analysis(ifSuccess: {
                 return Result(value: $0)
             }, ifFailure: {
                 return Result(error: $0)
@@ -46,9 +46,9 @@ extension ResultProtocol where Value: AsyncType, Value.Value: ResultProtocol, Er
     /// with the error from the outer result otherwise
     public func flatten() -> Future<Value.Value.Value, Value.Value.Error> {
         return Future { complete in
-            analysis(ifSuccess: { innerFuture -> () in
+            result.analysis(ifSuccess: { innerFuture -> () in
                 innerFuture.onComplete(ImmediateExecutionContext) { res in
-                    complete(res.analysis(ifSuccess: {
+                    complete(res.result.analysis(ifSuccess: {
                         return Result(value: $0)
                     }, ifFailure: {
                         return Result(error: $0)
